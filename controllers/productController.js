@@ -141,7 +141,10 @@ const adminGetProducts = async (req, res, next) => {
     const products = await Product.find({})
       .sort({ category: 1 })
       .select("name price category");
-    return res.json(products);
+    return res.status(200).json({
+      statusCode: 200,
+      products
+    });
   } catch (err) {
     next(err);
   }
@@ -162,19 +165,22 @@ const adminCreateProduct = async (req, res, next) => {
     const product = new Product();
     const { name, description, count, price, category, attributesTable } =
       req.body;
+
     product.name = name;
     product.description = description;
     product.count = count;
     product.price = price;
     product.category = category;
-    if (attributesTable.length > 0) {
-      attributesTable.map((item) => {
+    const parsedAttributesTable = JSON.parse(attributesTable);
+    if (parsedAttributesTable.length > 0) {
+      parsedAttributesTable.map((item) => {
         product.attrs.push(item);
       });
     }
     await product.save();
 
-    res.json({
+    res.status(201).json({
+      statusCode: 201,
       message: "product created",
       productId: product._id,
     });

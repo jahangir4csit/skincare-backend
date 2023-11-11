@@ -9,7 +9,7 @@ const users = [
     lastName: 'admin',
     email: 'admin@admin.com',
     password: bcrypt.hashSync('admin@admin.com', 10),
-    isAdmin: true,
+          role: 'user',
   },
   {
       _id: objectId,
