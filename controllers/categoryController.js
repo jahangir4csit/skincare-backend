@@ -3,7 +3,10 @@ const Category = require("../models/CategoryModel")
 const getCategories = async (req, res, next) => {
     try {
         const categories = await Category.find({}).sort({name: "asc"}).orFail()
-        res.json(categories)
+        res.status(200).json({
+            statusCode: 200,
+            categories
+        })
     } catch(error) {
         next(error)
     }
@@ -11,18 +14,29 @@ const getCategories = async (req, res, next) => {
 
 const newCategory = async (req, res, next) => {
     try {
-        const {category} = req.body
+        const {category, description} = req.body
         if(!category) {
-            res.status(400).send("Category input is required")
+            res.status(300).send({
+                statusCode: 300,
+                message: "Category input is required"
+            })
         }
         const categoryExists = await Category.findOne({name: category})
         if(categoryExists) {
-            res.status(400).send("Category already exists")
+            res.status(300).send({
+                statusCode: 300,
+                message: "Category already exists"
+            })
         } else {
             const categoryCreated = await Category.create({
-                name: category
+                name: category,
+                description: description
             })
-            res.status(201).send({categoryCreated: categoryCreated})
+            res.status(201).send({
+                statusCode: 201,
+                message: 'Category Created',
+                categoryCreated: categoryCreated
+            })
         }
     } catch (err) {
         next(err)
@@ -37,7 +51,11 @@ const deleteCategory = async (req, res, next) => {
                 name: decodeURIComponent(req.params.category)
             }).orFail()
             await categoryExists.remove()
-            res.json({categoryDeleted: true})
+            res.status(201).send({
+                statusCode: 201,
+                message: 'Category Deleted',
+                categoryDeleted: true
+            })
         }
     } catch (err) {
         next(err)
