@@ -7,19 +7,21 @@ const fileUpload = require("express-fileupload");
 const cookieParser = require("cookie-parser");
 const cors = require('cors');
 const app = express();
-app.use(cors());
+const corsOptions = {
+    origin: 'http://localhost:3000',
+    credentials: true
+};
 
-app.use(helmet({
-    contentSecurityPolicy: false, 
-    crossOriginEmbedderPolicy: false
-}))
+app.use(cors(corsOptions));
 
 const httpServer = createServer(app);
 global.io = new Server(httpServer);
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(fileUpload());
+app.use(fileUpload({
+    useTempFiles: true
+}));
 
 const admins = [];
 let activeChats = [];
@@ -38,9 +40,9 @@ io.on("connection", (socket) => {
        let client = activeChats.find((client) => client.clientId === socket.id);
         let targetAdminId;
         if (client) {
-           targetAdminId = client.adminId; 
+           targetAdminId = client.adminId;
         } else {
-           let admin = get_random(admins); 
+           let admin = get_random(admins);
            activeChats.push({ clientId: socket.id, adminId: admin.id });
            targetAdminId = admin.id;
         }
@@ -72,7 +74,7 @@ io.on("connection", (socket) => {
     // client disconnected
     const removeIndexClient = activeChats.findIndex((item) => item.clientId === socket.id);
     if (removeIndexClient !== -1) {
-       activeChats.splice(removeIndexClient, 1); 
+       activeChats.splice(removeIndexClient, 1);
     }
     socket.broadcast.emit("disconnected", { reason: reason, socketId: socket.id });
   });
@@ -89,6 +91,8 @@ connectDB();
 app.use("/api", apiRoutes);
 
 const path = require("path");
+app.use('/public', express.static(path.join(__dirname, 'public')));
+
 if (process.env.NODE_ENV === "production") {
     app.use(express.static(path.join(__dirname, "../frontend/build")));
     app.get("*", (req, res) => res.sendFile(path.resolve(__dirname, "../frontend", "build", "index.html")));
