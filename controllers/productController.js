@@ -316,18 +316,10 @@ const adminUpload = async (req, res, next) => {
 
 const adminDeleteProductImage = async (req, res, next) => {
     const imagePath = decodeURIComponent(req.params.imagePath);
-    if (req.query.cloudinary === "true") {
-        try {
-           await Product.findOneAndUpdate({ _id: req.params.productId }, { $pull: { images: { path: imagePath } } }).orFail(); 
-            return res.end();
-        } catch(er) {
-            next(er);
-        }
-        return
-    }
+
   try {
     const path = require("path");
-    const finalPath = path.resolve("../frontend/public") + imagePath;
+    const finalPath = path.resolve("../skincare-backend/public") + '/' + imagePath;
 
     const fs = require("fs");
     fs.unlink(finalPath, (err) => {
@@ -335,11 +327,16 @@ const adminDeleteProductImage = async (req, res, next) => {
         res.status(500).send(err);
       }
     });
+
     await Product.findOneAndUpdate(
       { _id: req.params.productId },
       { $pull: { images: { path: imagePath } } }
     ).orFail();
-    return res.end();
+    res.status(201).json({
+      statusCode: 201,
+      message: "Image deleted"
+    });
+
   } catch (err) {
     next(err);
   }
