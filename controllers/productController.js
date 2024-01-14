@@ -2,7 +2,7 @@ const Product = require("../models/ProductModel");
 const recordsPerPage = require("../config/pagination");
 const imageValidate = require("../utils/imageValidate");
 const path = require("path");
-const {v4: uuidv4} = require("uuid");
+const { v4: uuidv4 } = require("uuid");
 
 const getProducts = async (req, res, next) => {
   try {
@@ -141,26 +141,25 @@ const getBestsellers = async (req, res, next) => {
 const adminGetProducts = async (req, res, next) => {
   try {
     const products = await Product.find({})
-        .sort({ category: 1 })
-        .select("_id name price category thumbnail");
+      .sort({ category: 1 })
+      .select("_id name price category thumbnail");
 
-    const formattedProducts = products.map(product => ({
+    const formattedProducts = products.map((product) => ({
       _id: product._id,
       name: product.name,
       price: product.price,
       category: product.category,
-      thumbnail: product.thumbnail.path
+      thumbnail: product.thumbnail.path,
     }));
 
     return res.status(200).json({
       statusCode: 200,
-      products: formattedProducts
+      products: formattedProducts,
     });
   } catch (err) {
     next(err);
   }
 };
-
 
 const adminDeleteProduct = async (req, res, next) => {
   try {
@@ -168,7 +167,7 @@ const adminDeleteProduct = async (req, res, next) => {
     await product.remove();
     res.status(201).json({
       statusCode: 201,
-      message: "product removed"
+      message: "product removed",
     });
   } catch (err) {
     next(err);
@@ -177,19 +176,92 @@ const adminDeleteProduct = async (req, res, next) => {
 
 const adminCreateProduct = async (req, res, next) => {
   try {
-    const product = new Product();
-    const { name, description, count, price, category, attributesTable } = req.body;
-
+    const { name, description, count, price, category, attributes } = req.body;
+    // const attributes = [
+    //   {
+    //     id: 1,
+    //     state: "default",
+    //     price: 19.99,
+    //     totalItme: 100,
+    //     availableStock: 100,
+    //     sold: 0,
+    //   },
+    // ];
+    var fileName = "";
     if (req.files && req.files.thumbnail) {
-      const {thumbnail} = req.files;
+      const { thumbnail } = req.files;
       const path = require("path");
       const { v4: uuidv4 } = require("uuid");
-      const originalFileName = path.basename(thumbnail.name, path.extname(thumbnail.name));
-      var fileName = originalFileName + '_' + uuidv4() + path.extname(thumbnail.name);
-      const uploadDirectory = path.resolve(
-        __dirname,
-        "../public",
+      const originalFileName = path.basename(
+        thumbnail.name,
+        path.extname(thumbnail.name)
       );
+      fileName =
+        originalFileName + "_" + uuidv4() + path.extname(thumbnail.name);
+
+      const uploadDirectory = path.resolve(__dirname, "../public");
+      var uploadPath = uploadDirectory + "/" + fileName;
+
+      // Move the uploaded file to the server
+      thumbnail.mv(uploadPath, function (err) {
+        if (err) {
+          return res.status(500).send(err);
+        }
+      });
+    }
+    // Set the thumbnail field with the path property
+    const insertData = {
+      name,
+      description,
+      count,
+      price,
+      category,
+      attributes,
+      thumbnail: { path: fileName },
+    };
+    const product = await new Product(insertData).save();
+
+    // Respond to the client
+    res.status(201).json({
+      statusCode: 201,
+      message: "Product created",
+      data: {
+        productId: product._id,
+      },
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      res.status(500).json({
+        status: "error",
+        message: `Duplicate Data ${
+          err.keyValue[`${Object.keys(err.keyValue)}`]
+        }`,
+      });
+    } else {
+      res.status(500).json({
+        status: "error",
+        message: err.message,
+      });
+    }
+  }
+};
+const adminCreateProductOld = async (req, res, next) => {
+  try {
+    const product = new Product();
+    const { name, description, count, price, category, attributesTable } =
+      req.body;
+
+    if (req.files && req.files.thumbnail) {
+      const { thumbnail } = req.files;
+      const path = require("path");
+      const { v4: uuidv4 } = require("uuid");
+      const originalFileName = path.basename(
+        thumbnail.name,
+        path.extname(thumbnail.name)
+      );
+      var fileName =
+        originalFileName + "_" + uuidv4() + path.extname(thumbnail.name);
+      const uploadDirectory = path.resolve(__dirname, "../public");
       var uploadPath = uploadDirectory + "/" + fileName;
 
       // Move the uploaded file to the server
@@ -230,15 +302,14 @@ const adminCreateProduct = async (req, res, next) => {
       // Handle the case where no thumbnail is provided
       res.status(400).json({
         statusCode: 400,
-        message: 'Bad Request',
-        error: 'Thumbnail is required.',
+        message: "Bad Request",
+        error: "Thumbnail is required.",
       });
     }
   } catch (err) {
     next(err);
   }
 };
-
 
 const adminUpdateProduct = async (req, res, next) => {
   try {
@@ -268,7 +339,7 @@ const adminUpdateProduct = async (req, res, next) => {
 };
 
 const adminUpload = async (req, res, next) => {
-  console.log(req.files, '======gett upload req.files');
+  console.log(req.files, "======gett upload req.files");
 
   try {
     if (!req.files || !!req.files.images === false) {
@@ -282,10 +353,7 @@ const adminUpload = async (req, res, next) => {
 
     const path = require("path");
     const { v4: uuidv4 } = require("uuid");
-    const uploadDirectory = path.resolve(
-      __dirname,
-      "../public",
-    );
+    const uploadDirectory = path.resolve(__dirname, "../public");
 
     let product = await Product.findById(req.query.productId).orFail();
 
@@ -297,8 +365,12 @@ const adminUpload = async (req, res, next) => {
     }
 
     for (let image of imagesTable) {
-      const originalFileName = path.basename(image.name, path.extname(image.name));
-      var fileName = originalFileName + '_' + uuidv4() + path.extname(image.name);
+      const originalFileName = path.basename(
+        image.name,
+        path.extname(image.name)
+      );
+      var fileName =
+        originalFileName + "_" + uuidv4() + path.extname(image.name);
       var uploadPath = uploadDirectory + "/" + fileName;
       product.images.push({ path: fileName });
       image.mv(uploadPath, function (err) {
@@ -315,11 +387,12 @@ const adminUpload = async (req, res, next) => {
 };
 
 const adminDeleteProductImage = async (req, res, next) => {
-    const imagePath = decodeURIComponent(req.params.imagePath);
+  const imagePath = decodeURIComponent(req.params.imagePath);
 
   try {
     const path = require("path");
-    const finalPath = path.resolve("../skincare-backend/public") + '/' + imagePath;
+    const finalPath =
+      path.resolve("../skincare-backend/public") + "/" + imagePath;
 
     const fs = require("fs");
     fs.unlink(finalPath, (err) => {
@@ -334,9 +407,8 @@ const adminDeleteProductImage = async (req, res, next) => {
     ).orFail();
     res.status(201).json({
       statusCode: 201,
-      message: "Image deleted"
+      message: "Image deleted",
     });
-
   } catch (err) {
     next(err);
   }
