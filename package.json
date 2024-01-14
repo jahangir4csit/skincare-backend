@@ -10,7 +10,7 @@
     "dev": "concurrently --kill-others-on-fail \"npm run server-dev\" \"npm run client\"",
     "seed:data": "node seeder/seeder",
     "seed:data-d": "node seeder/seeder -d",
-    "start": "node server.js"
+    "start": "nodemon server.js"
   },
   "author": "",
   "license": "ISC",
