@@ -91,7 +91,6 @@ const getProducts = async (req, res, next) => {
         ],
       };
     }
-
     const totalProducts = await Product.countDocuments(query);
     const products = await Product.find(query)
       .select(select)
@@ -99,13 +98,17 @@ const getProducts = async (req, res, next) => {
       .sort(sort)
       .limit(recordsPerPage);
 
-    res.json({
+    res.status(200).json({
+      status: "success",
       products,
       pageNum,
       paginationLinksNumber: Math.ceil(totalProducts / recordsPerPage),
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
   }
 };
 
@@ -114,9 +117,16 @@ const getProductById = async (req, res, next) => {
     const product = await Product.findById(req.params.id)
       .populate("reviews")
       .orFail();
-    res.json(product);
+
+    res.status(200).json({
+      status: "success",
+      product,
+    });
   } catch (err) {
-    next(err);
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
   }
 };
 
@@ -132,32 +142,43 @@ const getBestsellers = async (req, res, next) => {
       { $project: { _id: 1, name: 1, images: 1, category: 1, description: 1 } },
       { $limit: 3 },
     ]);
-    res.json(products);
+
+    res.status(200).json({
+      status: "success",
+      products,
+    });
   } catch (err) {
-    next(err);
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
   }
 };
 
 const adminGetProducts = async (req, res, next) => {
   try {
-    const products = await Product.find({})
+    const products = await Product.find()
       .sort({ category: 1 })
       .select("_id name price category thumbnail");
 
-    const formattedProducts = products.map((product) => ({
-      _id: product._id,
-      name: product.name,
-      price: product.price,
-      category: product.category,
-      thumbnail: product.thumbnail.path,
-    }));
+    // const formattedProducts = products.map((product) => ({
+    //   _id: product._id,
+    //   name: product.name,
+    //   price: product.price,
+    //   category: product.category,
+    //   thumbnail: product.thumbnail.path,
+    // }));
 
-    return res.status(200).json({
+    res.status(200).json({
       statusCode: 200,
-      products: formattedProducts,
+      status: "success",
+      products,
     });
   } catch (err) {
-    next(err);
+    res.status(500).json({
+      status: "error",
+      message: err?.message,
+    });
   }
 };
 
@@ -165,12 +186,15 @@ const adminDeleteProduct = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id).orFail();
     await product.remove();
-    res.status(201).json({
-      statusCode: 201,
+    res.status(200).json({
+      status: "success",
       message: "product removed",
     });
   } catch (err) {
-    next(err);
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
   }
 };
 
@@ -217,7 +241,7 @@ const adminCreateProduct = async (req, res, next) => {
       price,
       category,
       attributes,
-      thumbnail: { path: fileName },
+      thumbnail: fileName,
     };
     const product = await new Product(insertData).save();
 
@@ -245,102 +269,35 @@ const adminCreateProduct = async (req, res, next) => {
     }
   }
 };
-const adminCreateProductOld = async (req, res, next) => {
-  try {
-    const product = new Product();
-    const { name, description, count, price, category, attributesTable } =
-      req.body;
-
-    if (req.files && req.files.thumbnail) {
-      const { thumbnail } = req.files;
-      const path = require("path");
-      const { v4: uuidv4 } = require("uuid");
-      const originalFileName = path.basename(
-        thumbnail.name,
-        path.extname(thumbnail.name)
-      );
-      var fileName =
-        originalFileName + "_" + uuidv4() + path.extname(thumbnail.name);
-      const uploadDirectory = path.resolve(__dirname, "../public");
-      var uploadPath = uploadDirectory + "/" + fileName;
-
-      // Move the uploaded file to the server
-      thumbnail.mv(uploadPath, function (err) {
-        if (err) {
-          return res.status(500).send(err);
-        }
-
-        // Set the thumbnail field with the path property
-        product.thumbnail = { path: fileName };
-
-        // Continue with other field assignments
-        product.name = name;
-        product.description = description;
-        product.count = count;
-        product.price = price;
-        product.category = category;
-        const parsedAttributesTable = JSON.parse(attributesTable);
-        if (parsedAttributesTable.length > 0) {
-          parsedAttributesTable.forEach((item) => {
-            product.attrs.push(item);
-          });
-        }
-
-        // Save the product
-        product.save();
-
-        // Respond to the client
-        res.status(201).json({
-          statusCode: 201,
-          message: "Product created",
-          data: {
-            productId: product._id,
-          },
-        });
-      });
-    } else {
-      // Handle the case where no thumbnail is provided
-      res.status(400).json({
-        statusCode: 400,
-        message: "Bad Request",
-        error: "Thumbnail is required.",
-      });
-    }
-  } catch (err) {
-    next(err);
-  }
-};
 
 const adminUpdateProduct = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id).orFail();
-    const { name, description, count, price, category, attributesTable } =
-      req.body;
+    const { name, description, count, price, category, attributes } = req.body;
     product.name = name || product.name;
     product.description = description || product.description;
     product.count = count || product.count;
     product.price = price || product.price;
     product.category = category || product.category;
-    if (attributesTable.length > 0) {
-      product.attrs = [];
-      attributesTable.map((item) => {
-        product.attrs.push(item);
-      });
-    } else {
-      product.attrs = [];
+    if (attributes.length > 0) {
+      product.attributes = attributes;
     }
     await product.save();
-    res.json({
+
+    res.status(200).json({
+      status: "success",
       message: "product updated",
     });
   } catch (err) {
-    next(err);
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
   }
 };
 
 const adminUpload = async (req, res, next) => {
-  console.log(req.files, "======gett upload req.files");
-
+  // console.log(req.files, "======gett upload req.files");
   try {
     if (!req.files || !!req.files.images === false) {
       return res.status(400).send("No files were uploaded.");
@@ -380,9 +337,16 @@ const adminUpload = async (req, res, next) => {
       });
     }
     await product.save();
-    return res.send("Files uploaded!");
+
+    return res.status(200).json({
+      status: "success",
+      message: "Files uploaded!",
+    });
   } catch (err) {
-    next(err);
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
   }
 };
 
@@ -405,12 +369,15 @@ const adminDeleteProductImage = async (req, res, next) => {
       { _id: req.params.productId },
       { $pull: { images: { path: imagePath } } }
     ).orFail();
-    res.status(201).json({
-      statusCode: 201,
+    res.status(200).json({
+      statusCode: 200,
       message: "Image deleted",
     });
   } catch (err) {
-    next(err);
+    res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
   }
 };
 
