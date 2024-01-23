@@ -204,9 +204,19 @@ const adminCreateProduct = async (req, res, next) => {
     // const attributes = [
     //   {
     //     id: 1,
-    //     state: "default",
+    //     size: "L",
+    //     color: "red",
     //     price: 19.99,
-    //     totalItme: 100,
+    //     totalItem: 100,
+    //     availableStock: 100,
+    //     sold: 0,
+    //   },
+    //   {
+    //     id: 2,
+    //     size: "L",
+    //     color: "red",
+    //     price: 19.99,
+    //     totalItem: 100,
     //     availableStock: 100,
     //     sold: 0,
     //   },

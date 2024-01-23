@@ -1,58 +1,114 @@
 const Order = require("../models/OrderModel");
 const Product = require("../models/ProductModel");
+const User = require("../models/UserModel");
 const ObjectId = require("mongodb").ObjectId;
 
-const getUserOrders = async (req, res, next) => {
+const getUserOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: ObjectId(req.user._id) });
-    res.send(orders);
+    const orders = await Order.find({ user: new ObjectId(req.user._id) });
+
+    res.status(200).json({
+      status: "success",
+      message: "Data find successfully!",
+      orders,
+    });
   } catch (error) {
-    next(error);
+    res.status(500).json({
+      status: "error",
+      message: error?.message,
+    });
   }
 };
 
-const getOrder = async (req, res, next) => {
+const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id)
-      .populate("user", "-password -isAdmin -_id -__v -createdAt -updatedAt")
-      .orFail();
-    res.send(order);
-  } catch (err) {
-    next(err);
+    const order = await Order.findById(req.params.id).orFail();
+    res.status(200).json({
+      status: "success",
+      message: "Data find successfully!",
+      order,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: error?.message,
+    });
   }
 };
 
-const createOrder = async (req, res, next) => {
+const orderValidateRule = {
+  orderNumber: "required|string",
+  customerId: "required|string",
+  customerInfo: "required|object",
+  shippingAddress: "required|object",
+  items: "required|array",
+  subtotalAmount: "required|integer",
+  totalAmount: "required|integer",
+  paymentMethod: "required|string",
+  discount: "required|object",
+};
+const createOrder = async (req, res) => {
   try {
-    const { cartItems, orderTotal, paymentMethod } = req.body;
-    if (!cartItems || !orderTotal || !paymentMethod) {
-      return res.status(400).send("All inputs are required");
+    const {
+      orderNumber,
+      customerId,
+      customerInfo,
+      shippingAddress,
+      items,
+      totalAmount,
+      paymentMethod,
+      discount,
+      subtotalAmount,
+      totalItem,
+    } = req.body;
+
+    if (!customerInfo || !items || !paymentMethod) {
+      throw new Error("All inputs are required!");
     }
 
-    let ids = cartItems.map((item) => {
-      return item.productID;
-    });
-    let qty = cartItems.map((item) => {
-      return Number(item.quantity);
-    });
-
-    await Product.find({ _id: { $in: ids } }).then((products) => {
-      products.forEach(function (product, idx) {
-        product.sales += qty[idx];
-        product.save();
+    if (items.length > 0) {
+      items.map(async (item) => {
+        await Product.updateOne(
+          {
+            _id: new ObjectId(item.productId),
+            "attributes.id": item.itemId,
+          },
+          {
+            $inc: {
+              "attributes.$.availableStock": -Number(item.quantity),
+              "attributes.$.sold": Number(item.quantity),
+            },
+          }
+        );
       });
-    });
+    }
+    const createdOrder = await new Order({
+      orderNumber,
+      customerId,
+      customerInfo,
+      shippingAddress,
+      items,
+      subtotalAmount,
+      totalAmount,
+      paymentMethod,
+      discount,
+      totalItem,
+      paidAmount: 0,
+    }).save();
 
-    const order = new Order({
-      user: ObjectId(req.user._id),
-      orderTotal: orderTotal,
-      cartItems: cartItems,
-      paymentMethod: paymentMethod,
+    res.status(200).json({
+      statusCode: 200,
+      status: "success",
+      message: "order created!",
+      data: createdOrder,
     });
-    const createdOrder = await order.save();
-    res.status(201).send(createdOrder);
   } catch (err) {
-    next(err);
+    console.log(err);
+    res.status(500).json({
+      statusCode: 500,
+      status: "error",
+      message: err?.message,
+    });
   }
 };
 
@@ -110,13 +166,100 @@ const getOrderForAnalysis = async (req, res, next) => {
     next(err);
   }
 };
+const addShippingAddress = async (req, res) => {
+  try {
+    const { shippingAddress } = req.body;
+    const userId = req.user._id;
+
+    const data = await User.findOneAndUpdate(
+      { _id: userId },
+      {
+        $push: {
+          shippingAddress: shippingAddress,
+        },
+      },
+      { new: true }
+    ).select("shippingAddress");
+
+    res.status(200).send({
+      status: "success",
+      message: "Successfully",
+      data: data.shippingAddress,
+    });
+  } catch (err) {
+    res.status(500).send({
+      status: "error",
+      message: err?.message,
+    });
+  }
+};
+const getShippingAddress = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const data = await User.findOne({ _id: new ObjectId(userId) }).select(
+      "shippingAddress"
+    );
+
+    res.status(200).send({
+      status: "success",
+      message: "Successfully",
+      data: data.shippingAddress,
+    });
+  } catch (err) {
+    res.status(500).send({
+      status: "error",
+      message: err?.message,
+    });
+  }
+};
+const getShippingAddressById = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const data = await User.findOne({ _id: new ObjectId(userId) }).select(
+      "shippingAddress"
+    );
+
+    res.status(200).send({
+      status: "success",
+      message: "Successfully",
+      data: data.shippingAddress,
+    });
+  } catch (err) {
+    res.status(500).send({
+      status: "error",
+      message: err?.message,
+    });
+  }
+};
+const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find();
+
+    res.status(200).json({
+      status: "success",
+      message: "Data find successfully!",
+      orders,
+    });
+  } catch (error) {
+    console.log(error);
+    // res.status(500).json({
+    //   status: "error",
+    //   message: error?.message,
+    // });
+  }
+};
 
 module.exports = {
   getUserOrders,
-  getOrder,
+  getOrderById,
   createOrder,
   updateOrderToPaid,
   updateOrderToDelivered,
   getOrders,
   getOrderForAnalysis,
+  addShippingAddress,
+  getShippingAddress,
+  getShippingAddressById,
+  orderValidateRule,
+  getAllOrders,
 };

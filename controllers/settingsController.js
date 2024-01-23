@@ -62,15 +62,31 @@ const addVariation = async (req, res) => {
   try {
     const { variation } = req.body;
     const setting = await Settings.findOne();
-    const info = await Settings.findOneAndUpdate(
-      { _id: setting._id },
-      { $push: { proVariationLabel: variation } },
-      { new: true }
-    );
+    if (!setting) {
+      throw new Error("Setting data not found!");
+    }
+    const isExist = await Settings.countDocuments({
+      "proVariationLabel.label": variation.label,
+    });
+    let info;
+    if (!isExist) {
+      info = await Settings.findOneAndUpdate(
+        { _id: setting._id },
+        { $push: { proVariationLabel: variation } },
+        { new: true }
+      );
+    } else {
+      info = await Settings.findOneAndUpdate(
+        { _id: setting._id, "proVariationLabel.label": variation.label },
+        { $set: { "proVariationLabel.$.values": variation.values } },
+        { new: true }
+      );
+    }
+
     res.status(200).json({
       status: "success",
       message: "Successfully",
-      data: info,
+      data: info?.proVariationLabel,
     });
   } catch (err) {
     if (err.code === 11000) {
