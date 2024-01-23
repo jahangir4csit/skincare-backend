@@ -19,23 +19,24 @@ const productSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    count: {
-      type: Number,
+    // type : single, variant
+    type: {
+      type: String,
       required: true,
     },
-    price: {
-      type: Number,
-      required: true,
-    },
+    // count: {
+    //   type: Number,
+    //   required: true,
+    // },
+    // price: {
+    //   type: Number,
+    //   required: true,
+    // },
     rating: {
       type: Number,
     },
     reviewsNumber: {
       type: Number,
-    },
-    sales: {
-      type: Number,
-      default: 0,
     },
     attributes: [],
     thumbnail: {
