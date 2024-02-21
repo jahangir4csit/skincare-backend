@@ -3,6 +3,7 @@ const Review = require("../models/ReviewModel");
 const Product = require("../models/ProductModel");
 const { hashPassword, comparePasswords } = require("../utils/hashPassword");
 const generateAuthToken = require("../utils/generateAuthToken");
+const ObjectId = require("mongodb").ObjectId;
 
 const getUsers = async (req, res, next) => {
   try {
@@ -275,6 +276,117 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+//shipping address methods
+const addShippingAddress = async (req, res) => {
+  try {
+    const { shippingAddress } = req.body;
+    const userId = req.user._id;
+
+    const data = await User.findOneAndUpdate(
+      { _id: userId },
+      {
+        $push: {
+          shippingAddress: shippingAddress,
+        },
+      },
+      { new: true }
+    ).select("shippingAddress");
+
+    res.status(200).send({
+      status: "success",
+      message: "Successfully",
+      data: data.shippingAddress,
+    });
+  } catch (err) {
+    res.status(500).send({
+      status: "error",
+      message: err?.message,
+    });
+  }
+};
+const updateShippingAddress = async (req, res) => {
+  try {
+    const { shippingAddress } = req.body;
+    const userId = req.user._id;
+    const { addressId } = req.params;
+
+    const updatedValue = {
+      "shippingAddress.$.type": shippingAddress.type,
+      "shippingAddress.$.fullName": shippingAddress.fullName,
+      "shippingAddress.$.address": shippingAddress.address,
+      "shippingAddress.$.country": shippingAddress.country,
+      "shippingAddress.$.zipCode": shippingAddress.zipCode,
+      "shippingAddress.$.city": shippingAddress.city,
+      "shippingAddress.$.state": shippingAddress.state,
+    };
+
+    const data = await User.findOneAndUpdate(
+      { _id: userId, "shippingAddress.id": Number(addressId) },
+      {
+        $set: updatedValue,
+      },
+      { new: true }
+    );
+
+    res.status(200).send({
+      status: "success",
+      message: "Successfully",
+      data: data?.shippingAddress,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({
+      status: "error",
+      message: err?.message,
+    });
+  }
+};
+const getShippingAddress = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const data = await User.findOne({ _id: new ObjectId(userId) }).select(
+      "shippingAddress"
+    );
+
+    res.status(200).send({
+      status: "success",
+      message: "Successfully",
+      data: data.shippingAddress,
+    });
+  } catch (err) {
+    res.status(500).send({
+      status: "error",
+      message: err?.message,
+    });
+  }
+};
+const getShippingAddressById = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { addressId } = req.params;
+    const data = await User.aggregate([
+      { $match: { _id: new ObjectId(userId) } },
+      { $unwind: "$shippingAddress" },
+      { $match: { "shippingAddress.id": Number(addressId) } },
+      {
+        $replaceRoot: { newRoot: "$shippingAddress" },
+      },
+    ]);
+
+    res.status(200).send({
+      status: "success",
+      message: "Successfully",
+      data: data,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send({
+      status: "error",
+      message: err?.message,
+    });
+  }
+};
+
 module.exports = {
   getUsers,
   registerUser,
@@ -285,4 +397,8 @@ module.exports = {
   getUser,
   updateUser,
   deleteUser,
+  addShippingAddress,
+  getShippingAddress,
+  getShippingAddressById,
+  updateShippingAddress,
 };

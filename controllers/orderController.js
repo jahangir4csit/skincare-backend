@@ -166,71 +166,7 @@ const getOrderForAnalysis = async (req, res, next) => {
     next(err);
   }
 };
-const addShippingAddress = async (req, res) => {
-  try {
-    const { shippingAddress } = req.body;
-    const userId = req.user._id;
 
-    const data = await User.findOneAndUpdate(
-      { _id: userId },
-      {
-        $push: {
-          shippingAddress: shippingAddress,
-        },
-      },
-      { new: true }
-    ).select("shippingAddress");
-
-    res.status(200).send({
-      status: "success",
-      message: "Successfully",
-      data: data.shippingAddress,
-    });
-  } catch (err) {
-    res.status(500).send({
-      status: "error",
-      message: err?.message,
-    });
-  }
-};
-const getShippingAddress = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const data = await User.findOne({ _id: new ObjectId(userId) }).select(
-      "shippingAddress"
-    );
-
-    res.status(200).send({
-      status: "success",
-      message: "Successfully",
-      data: data.shippingAddress,
-    });
-  } catch (err) {
-    res.status(500).send({
-      status: "error",
-      message: err?.message,
-    });
-  }
-};
-const getShippingAddressById = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const data = await User.findOne({ _id: new ObjectId(userId) }).select(
-      "shippingAddress"
-    );
-
-    res.status(200).send({
-      status: "success",
-      message: "Successfully",
-      data: data.shippingAddress,
-    });
-  } catch (err) {
-    res.status(500).send({
-      status: "error",
-      message: err?.message,
-    });
-  }
-};
 const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find();
@@ -257,9 +193,6 @@ module.exports = {
   updateOrderToDelivered,
   getOrders,
   getOrderForAnalysis,
-  addShippingAddress,
-  getShippingAddress,
-  getShippingAddressById,
   orderValidateRule,
   getAllOrders,
 };

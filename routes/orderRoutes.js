@@ -14,9 +14,6 @@ const {
   updateOrderToDelivered,
   getOrders,
   getOrderForAnalysis,
-  addShippingAddress,
-  getShippingAddress,
-  getShippingAddressById,
   getAllOrders,
 } = require("../controllers/orderController");
 
@@ -31,10 +28,6 @@ router.get("/", getUserOrders);
 router.get("/order/:id", getOrderById);
 router.post("/", validate(orderValidateRule), createOrder);
 router.put("/paid/:id", updateOrderToPaid);
-router.post("/shippingAddress", addShippingAddress);
-router.get("/shippingAddress", getShippingAddress);
-router.get("/shippingAddressById/:id", getShippingAddressById);
-// router.get("/", getShippingAddress);
 
 // admin routes
 router.use(verifyIsAdmin);

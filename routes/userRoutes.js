@@ -14,6 +14,10 @@ const {
   getUser,
   updateUser,
   deleteUser,
+  addShippingAddress,
+  getShippingAddress,
+  getShippingAddressById,
+  updateShippingAddress,
 } = require("../controllers/userController");
 
 router.post("/register", registerUser);
@@ -24,6 +28,11 @@ router.use(verifyIsLoggedIn);
 router.put("/profile", updateUserProfile);
 router.get("/profile/:id", getUserProfile);
 router.post("/review/:productId", writeReview);
+
+router.post("/shippingAddress", addShippingAddress);
+router.get("/shippingAddress", getShippingAddress);
+router.get("/shippingAddressById/:addressId", getShippingAddressById);
+router.put("/shippingUpdate/:addressId", updateShippingAddress);
 
 // admin routes:
 router.use(verifyIsAdmin);
